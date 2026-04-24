@@ -1,6 +1,13 @@
-Requirements: Python 3.11+, discord.py 2.x, aiosqlite, python-dotenv, aiohttp
+Discord.js v14 bot
 
 Install:
-python -m pip install -U discord.py aiosqlite python-dotenv aiohttp
+  npm install
 
-Place your bot token in .env and run: python main.py
+Setup:
+  - Copy .env.example to .env and set DISCORD_TOKEN and CLIENT_ID
+  - Run node deploy-commands.js once after the first deploy or after adding new commands to register slash commands globally. (Global commands may take up to 1 hour to propagate.)
+  - Start the bot: npm start
+
+Notes:
+  - The database file is stored under data/bot.db and is ignored by git.
+  - Ensure you rotate your bot token if it was exposed.

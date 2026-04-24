@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import fs from 'fs';
+import { mkdirSync } from 'fs';
 import path from 'path';
 import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js';
 import { DB } from './db.js';
@@ -33,6 +34,9 @@ for (const file of fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'))) {
   if (once) client.once(name, (...args) => execute(...args, client));
   else client.on(name, (...args) => execute(...args, client));
 }
+
+// Ensure data directory exists
+mkdirSync(path.join(process.cwd(), 'data'), { recursive: true });
 
 // Initialize DB (synchronous)
 DB.init();
