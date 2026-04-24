@@ -5,6 +5,8 @@ import path from 'path';
 import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js';
 import { DB } from './db.js';
 import { DISCORD_TOKEN } from './config.js';
+import { deployCommands } from './deploy-commands.js';
+await deployCommands();
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],

@@ -63,7 +63,7 @@ export async function execute(interaction) {
     const title = new TextInputBuilder().setCustomId('title').setLabel('Party Title').setStyle(TextInputStyle.Short).setRequired(true);
     const template = new TextInputBuilder().setCustomId('template').setLabel('Template Name (leave blank for custom)').setStyle(TextInputStyle.Short).setRequired(false);
     const size = new TextInputBuilder().setCustomId('size').setLabel('Party Size (ignored if template used)').setStyle(TextInputStyle.Short).setRequired(false);
-    const roles = new TextInputBuilder().setCustomId('roles').setLabel('Roles: RoleName:Count per line (ignored if template used)').setStyle(TextInputStyle.Paragraph).setRequired(false);
+    const roles = new TextInputBuilder().setCustomId('roles').setLabel('Roles (Role:Count, one per line)').setStyle(TextInputStyle.Paragraph).setRequired(false);
     const start_time = new TextInputBuilder().setCustomId('start_time').setLabel('Start Time (e.g. 21:00 UTC)').setStyle(TextInputStyle.Short).setRequired(true);
     modal.addComponents(new ActionRowBuilder().addComponents(title), new ActionRowBuilder().addComponents(template), new ActionRowBuilder().addComponents(size), new ActionRowBuilder().addComponents(roles), new ActionRowBuilder().addComponents(start_time));
     return interaction.showModal(modal);
