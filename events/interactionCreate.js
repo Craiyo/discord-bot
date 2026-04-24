@@ -197,13 +197,13 @@ export async function execute(interaction, client) {
       if (custom.startsWith('comm_approve_') || custom.startsWith('comm_reject_') || custom.startsWith('guild_approve_') || custom.startsWith('guild_reject_')) {
         const parts = custom.split('_');
         const action = parts[0]; // comm or guild
-        const verb = parts[1]; // approve/reject
-        // rem: customId formats: comm_approve_{userId}_{tier}  comm_reject_{userId}  guild_approve_{userId}  guild_reject_{userId}
-        if (action === 'comm' && verb === 'approve') {
-        const parts = custom.split('_');
-        const action = parts[0]; // comm or guild
-        const verb = parts[1]; // approve/reject
-        // rem: customId formats: comm_approve_{userId}_{tier}  comm_reject_{userId}  guild_approve_{userId}  guild_reject_{userId}
+        const verb = parts[1]; // approve or reject
+        // formats:
+        // comm_approve_{userId}_{tier}
+        // comm_reject_{userId}
+        // guild_approve_{userId}
+        // guild_reject_{userId}
+
         if (action === 'comm' && verb === 'approve') {
           const userId = parts[2];
           const tier = parts[3] || null;
