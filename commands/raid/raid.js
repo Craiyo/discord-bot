@@ -5,7 +5,12 @@ import { DB } from '../../db.js';
 export const raidPingTimers = new Map();
 
 export function buildRaidEmbed(party) {
-  const embed = new EmbedBuilder().setTitle(party.title).setDescription(party.description || '').setFooter({ text: `Start Time: ${party.start_time} | Hosted by ${party.host_id ? `<@${party.host_id}>` : 'unknown'} | Party ID: ${party.id}` });
+  const titleText = (party.title && String(party.title).trim().length>0) ? String(party.title) : 'Raid Party';
+  const embed = new EmbedBuilder().setTitle(titleText);
+  if (party.description && String(party.description).trim().length>0) embed.setDescription(String(party.description));
+  const footerText = `Start Time: ${party.start_time || 'TBD'} | Hosted by ${party.host_id ? `<@${party.host_id}>` : 'unknown'} | Party ID: ${party.id}`;
+  embed.setFooter({ text: footerText });
+
   let color = 0x2ecc71;
   if (party.status === 'full') color = 0xe74c3c;
   if (party.status === 'closed') color = 0x95a5a6;
@@ -19,14 +24,15 @@ export function buildRaidEmbed(party) {
   const components = [];
   const roleButtons = [];
   for (const r of roles) {
-    const name = r.name;
+    const name = r.name || 'Role';
     const count = Number(r.count) || 0;
     const filled = (members[name] || []).length;
     const fieldName = `⚔️ ${name} (${filled}/${count})`;
     const value = (members[name] && members[name].length>0) ? members[name].map(id=>`<@${id}>`).join('\n') : 'Empty';
-    embed.addFields({ name: fieldName, value, inline: false });
+    // only add fields with non-empty name and value
+    if (String(fieldName).trim().length>0 && String(value).trim().length>0) embed.addFields({ name: fieldName, value, inline: false });
 
-    const btn = new ButtonBuilder().setCustomId(`raid_join_${party.id}_${encodeURIComponent(name)}`).setLabel(name);
+    const btn = new ButtonBuilder().setCustomId(`raid_join_${party.id}_${encodeURIComponent(name)}`).setLabel(name.length>80?name.slice(0,77)+"...":name);
     if (party.status === 'closed') btn.setDisabled(true).setStyle(ButtonStyle.Secondary);
     else btn.setStyle(filled >= count ? ButtonStyle.Secondary : ButtonStyle.Primary).setDisabled(filled >= count || party.status === 'closed');
 
