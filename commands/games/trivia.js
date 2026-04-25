@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import fetch from 'node-fetch';
+
 
 export const data = new SlashCommandBuilder().setName('trivia').setDescription('Fetch a trivia question');
 
