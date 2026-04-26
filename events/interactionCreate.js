@@ -1,4 +1,4 @@
-import { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits } from 'discord.js';
+import { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits, AttachmentBuilder } from 'discord.js';
 import { DB } from '../db.js';
 
 export const name = 'interactionCreate';
@@ -8,6 +8,20 @@ export const once = false;
 const pendingCommunityData = new Map();
 // Timers for raid start pings keyed by partyId
 const raidPingTimers = new Map();
+
+async function generateTranscript(channel) {
+  try {
+    const messages = await channel.messages.fetch({ limit: 100 });
+    const ordered = Array.from(messages.values()).reverse();
+    const transcript = ordered.map(m => `[${m.createdAt.toISOString()}] ${m.author.tag}: ${m.content}`).join('\n');
+    const filename = `transcript-${channel.name}-${new Date().toISOString().slice(0,10)}.txt`;
+    const buffer = Buffer.from(transcript, 'utf8');
+    return new AttachmentBuilder(buffer, { name: filename });
+  } catch (e) {
+    console.error('generateTranscript error', e);
+    return null;
+  }
+}
 
 export async function execute(interaction, client) {
   try {
@@ -38,7 +52,7 @@ export async function execute(interaction, client) {
         return interaction.showModal(HelpModal());
       }
 
-      // Raid join/leave/close handlers
+      // Raid join/leave/close handlers (unchanged)
       if (custom.startsWith('raid_join_')) {
         // format: raid_join_{partyId}_{roleEnc}
         const rest = custom.slice('raid_join_'.length);
@@ -193,96 +207,7 @@ export async function execute(interaction, client) {
         return interaction.reply({ content: 'Party closed', ephemeral: true });
       }
 
-      // Approve / reject handlers for community and guild applications
-      if (custom.startsWith('comm_approve_') || custom.startsWith('comm_reject_') || custom.startsWith('guild_approve_') || custom.startsWith('guild_reject_')) {
-        const parts = custom.split('_');
-        const action = parts[0]; // comm or guild
-        const verb = parts[1]; // approve or reject
-        // formats:
-        // comm_approve_{userId}_{tier}
-        // comm_reject_{userId}
-        // guild_approve_{userId}
-        // guild_reject_{userId}
 
-        if (action === 'comm' && verb === 'approve') {
-          const userId = parts[2];
-          const tier = parts[3] || null; // '3-6', '7', or '8'
-          try {
-            // Role assignment is handled manually by staff. Do NOT auto-assign roles here.
-            // DM user to inform them of approval and their selected tier
-            const member = await interaction.guild.members.fetch(userId).catch(()=>null);
-            if (member) {
-              const emb = new EmbedBuilder().setTitle('✅ Community Application Approved').setColor(0x00ff00).setDescription(`Your application was approved. Selected tier: ${tier}`);
-              await member.send({ embeds: [emb] }).catch(()=>{});
-            }
-            // Update channel: mark approved, lock user send messages
-            await interaction.channel.send({ content: `Application approved by ${interaction.user}` }).catch(()=>{});
-            await interaction.channel.permissionOverwrites.edit(userId, { SendMessages: false }).catch(()=>{});
-            // Update DB ticket
-            const ticket = DB.getTicketByChannel(interaction.channel.id);
-            if (ticket) DB.updateTicketStatus(ticket.id, 'closed', new Date().toISOString());
-            await interaction.reply({ content: 'Application approved (no role auto-assigned)', ephemeral: true });
-          } catch (e) {
-            await interaction.reply({ content: 'Error processing approval', ephemeral: true });
-          }
-          return;
-        }
-
-        if (action === 'comm' && verb === 'reject') {
-          const userId = parts[2];
-          const ticket = DB.getTicketByChannel(interaction.channel.id);
-          try {
-            const member = await interaction.guild.members.fetch(userId).catch(()=>null);
-            if (member) {
-              const emb = new EmbedBuilder().setTitle('❌ Community Application Rejected').setColor(0xff0000).setDescription('Your application was rejected.');
-              await member.send({ embeds: [emb] }).catch(()=>{});
-            }
-            if (ticket) DB.updateTicketStatus(ticket.id, 'archived');
-            await interaction.reply({ content: 'Application rejected; channel will be deleted', ephemeral: true });
-            await interaction.channel.delete().catch(()=>{});
-          } catch (e) {
-            await interaction.reply({ content: 'Error processing rejection', ephemeral: true });
-          }
-          return;
-        }
-
-        if (action === 'guild' && verb === 'approve') {
-          const userId = parts[2];
-          try {
-            const member = await interaction.guild.members.fetch(userId).catch(()=>null);
-            if (member) {
-              const emb = new EmbedBuilder().setTitle('✅ Guild Application Approved').setColor(0x00ff00).setDescription('Your guild application was approved.');
-              await member.send({ embeds: [emb] }).catch(()=>{});
-            }
-            const ticket = DB.getTicketByChannel(interaction.channel.id);
-            if (ticket) DB.updateTicketStatus(ticket.id, 'closed', new Date().toISOString());
-            await interaction.channel.send({ content: `Application approved by ${interaction.user}` }).catch(()=>{});
-            await interaction.channel.permissionOverwrites.edit(userId, { SendMessages: false }).catch(()=>{});
-            await interaction.reply({ content: 'Guild application approved', ephemeral: true });
-          } catch (e) {
-            await interaction.reply({ content: 'Error processing approval', ephemeral: true });
-          }
-          return;
-        }
-
-        if (action === 'guild' && verb === 'reject') {
-          const userId = parts[2];
-          const ticket = DB.getTicketByChannel(interaction.channel.id);
-          try {
-            const member = await interaction.guild.members.fetch(userId).catch(()=>null);
-            if (member) {
-              const emb = new EmbedBuilder().setTitle('❌ Guild Application Rejected').setColor(0xff0000).setDescription('Your guild application was rejected.');
-              await member.send({ embeds: [emb] }).catch(()=>{});
-            }
-            if (ticket) DB.updateTicketStatus(ticket.id, 'archived');
-            await interaction.reply({ content: 'Guild application rejected; channel will be deleted', ephemeral: true });
-            await interaction.channel.delete().catch(()=>{});
-          } catch (e) {
-            await interaction.reply({ content: 'Error processing rejection', ephemeral: true });
-          }
-          return;
-        }
-      }
 
       // existing ticket close/archive
       if (custom.startsWith('ticket_close_')) {

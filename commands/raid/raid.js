@@ -59,9 +59,41 @@ export const data = new SlashCommandBuilder()
   .setDescription('Raid party commands')
   .addSubcommand(sub => sub.setName('create').setDescription('Create a raid party'))
   .addSubcommand(sub => sub.setName('close').setDescription('Close a raid party').addIntegerOption(o=>o.setName('id').setDescription('Party ID').setRequired(true)))
-  .addSubcommand(sub => sub.setName('kick').setDescription('Kick a member from a party').addIntegerOption(o=>o.setName('id').setDescription('Party ID').setRequired(true)).addUserOption(o=>o.setName('user').setDescription('User to kick').setRequired(true)));
+  .addSubcommand(sub => sub.setName('kick').setDescription('Kick a member from a party').addIntegerOption(o=>o.setName('id').setDescription('Party ID').setRequired(true)).addUserOption(o=>o.setName('user').setDescription('User to kick').setRequired(true)))
+  .addSubcommandGroup(group => group.setName('setup').setDescription('Raid setup')
+    .addSubcommand(sc => sc.setName('add').setDescription('Register a raid channel').addChannelOption(opt => opt.setName('channel').setDescription('Channel').setRequired(true)).addStringOption(opt => opt.setName('type').setDescription('Channel type').addChoices({ name: 'raid', value: 'raid' }, { name: 'basic', value: 'basic' }).setRequired(true)).addStringOption(opt => opt.setName('label').setDescription('Label/Name').setRequired(true)))
+    .addSubcommand(sc => sc.setName('remove').setDescription('Remove a registered raid channel').addChannelOption(opt => opt.setName('channel').setDescription('Channel').setRequired(true)))
+    .addSubcommand(sc => sc.setName('list').setDescription('List registered raid channels')));
 
 export async function execute(interaction) {
+  const group = interaction.options.getSubcommandGroup(false);
+  if (group === 'setup') {
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({ embeds: [new EmbedBuilder().setTitle('Error').setDescription('Administrator permission required').setColor(0xff0000)], ephemeral: true });
+    }
+
+    const sub = interaction.options.getSubcommand();
+    const guildId = interaction.guild.id;
+
+    if (sub === 'add') {
+      const channel = interaction.options.getChannel('channel');
+      const type = interaction.options.getString('type');
+      const label = interaction.options.getString('label');
+      DB.addRaidChannel(guildId, channel.id, type, label);
+      return interaction.reply({ content: `Channel ${channel} registered as ${type} — ${label}`, ephemeral: true });
+    } else if (sub === 'remove') {
+      const channel = interaction.options.getChannel('channel');
+      DB.removeRaidChannel(interaction.guild.id, channel.id);
+      return interaction.reply({ content: `Channel ${channel} removed`, ephemeral: true });
+    } else if (sub === 'list') {
+      const rows = DB.getAllRaidChannels(interaction.guild.id);
+      if (!rows || rows.length === 0) return interaction.reply({ embeds: [new EmbedBuilder().setTitle('Raid Channels').setDescription('No raid channels registered').setColor(0xffcc00)], ephemeral: true });
+      const embed = new EmbedBuilder().setTitle('Raid Channels').setColor(0x00ff00);
+      for (const r of rows) embed.addFields({ name: r.label || `${r.channel_id}`, value: `<#${r.channel_id}> — ${r.channel_type}`, inline: false });
+      return interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+  }
+
   const sub = interaction.options.getSubcommand();
   if (sub === 'create') {
     // show modal

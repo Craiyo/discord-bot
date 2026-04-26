@@ -24,11 +24,10 @@ export const DB = {
         this.db.prepare(`ALTER TABLE guild_config ADD COLUMN ${name} INTEGER`).run();
       }
     };
-    addCol('community_category');
-    addCol('guild_app_category');
-    addCol('help_category');
+    // legacy community_* columns removed from active usage; keep only role fields and ticket_category
     addCol('community_review_role');
     addCol('guild_review_role');
+    addCol('guild_member_role');
 
     // ticket tiers mapping
     this.db.prepare(`CREATE TABLE IF NOT EXISTS ticket_tiers (
@@ -128,37 +127,37 @@ export const DB = {
       log_channel: null,
       ticket_category: null,
       support_role: null,
-      community_category: null,
-      guild_app_category: null,
-      help_category: null,
       community_review_role: null,
-      guild_review_role: null
+      guild_review_role: null,
+      guild_member_role: null
     }, existing || {}, updates);
 
     if (existing) {
       this.db.prepare(`UPDATE guild_config SET
         log_channel = ?, ticket_category = ?, support_role = ?,
-        community_category = ?, guild_app_category = ?, help_category = ?,
-        community_review_role = ?, guild_review_role = ?
+        community_review_role = ?, guild_review_role = ?, guild_member_role = ?
         WHERE guild_id = ?`).run(
         merged.log_channel, merged.ticket_category, merged.support_role,
-        merged.community_category, merged.guild_app_category, merged.help_category,
-        merged.community_review_role, merged.guild_review_role,
+        merged.community_review_role, merged.guild_review_role, merged.guild_member_role,
         guildId
       );
     } else {
       this.db.prepare(`INSERT INTO guild_config (
         guild_id, log_channel, ticket_category, support_role,
-        community_category, guild_app_category, help_category,
-        community_review_role, guild_review_role
-      ) VALUES (?,?,?,?,?,?,?,?,?)`).run(
+        community_review_role, guild_review_role, guild_member_role
+      ) VALUES (?,?,?,?,?,?,?)`).run(
         guildId,
         merged.log_channel, merged.ticket_category, merged.support_role,
-        merged.community_category, merged.guild_app_category, merged.help_category,
-        merged.community_review_role, merged.guild_review_role
+        merged.community_review_role, merged.guild_review_role, merged.guild_member_role
       );
     }
   },
+
+  // Backwards compatible alias
+  getTicketByChannelId(channelId) {
+    return this.getTicketByChannel(channelId);
+  },
+
 
   insertAuditLog(guildId, userId, eventType, detail) {
     this.db.prepare('INSERT INTO audit_log (guild_id, user_id, event_type, detail) VALUES (?,?,?,?)')
