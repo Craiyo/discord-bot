@@ -206,18 +206,13 @@ export async function execute(interaction, client) {
 
         if (action === 'comm' && verb === 'approve') {
           const userId = parts[2];
-          const tier = parts[3] || null;
-          const guildId = interaction.guild.id;
-          const roleId = tier ? DB.getTierRole(guildId, Number(tier)) : null;
+          const tier = parts[3] || null; // '3-6', '7', or '8'
           try {
-            if (roleId) {
-              const member = await interaction.guild.members.fetch(userId).catch(()=>null);
-              if (member) await member.roles.add(String(roleId)).catch(()=>{});
-            }
-            // DM user
+            // Role assignment is handled manually by staff. Do NOT auto-assign roles here.
+            // DM user to inform them of approval and their selected tier
             const member = await interaction.guild.members.fetch(userId).catch(()=>null);
             if (member) {
-              const emb = new EmbedBuilder().setTitle('✅ Community Application Approved').setColor(0x00ff00).setDescription('Your application was approved. Welcome!');
+              const emb = new EmbedBuilder().setTitle('✅ Community Application Approved').setColor(0x00ff00).setDescription(`Your application was approved. Selected tier: ${tier}`);
               await member.send({ embeds: [emb] }).catch(()=>{});
             }
             // Update channel: mark approved, lock user send messages
@@ -226,7 +221,7 @@ export async function execute(interaction, client) {
             // Update DB ticket
             const ticket = DB.getTicketByChannel(interaction.channel.id);
             if (ticket) DB.updateTicketStatus(ticket.id, 'closed', new Date().toISOString());
-            await interaction.reply({ content: 'Application approved', ephemeral: true });
+            await interaction.reply({ content: 'Application approved (no role auto-assigned)', ephemeral: true });
           } catch (e) {
             await interaction.reply({ content: 'Error processing approval', ephemeral: true });
           }
@@ -410,8 +405,12 @@ export async function execute(interaction, client) {
         }
         // store pending data
         pendingCommunityData.set(interaction.user.id, { ign, breci: 'Yes', can_vc, open_mic });
-        // send select menu for tier
-        const options = Array.from({ length: 7 }, (_, i) => ({ label: `Tier ${i+1}`, value: String(i+1) }));
+        // send select menu for tier — limited to three options as requested
+        const options = [
+          { label: 'Tier 3-6', value: '3-6' },
+          { label: 'Tier 7', value: '7' },
+          { label: 'Tier 8', value: '8' }
+        ];
         const select = new StringSelectMenuBuilder().setCustomId('community_tier_select').setPlaceholder('Select your Tracking Toolkit Tier').addOptions(options);
         const row = new ActionRowBuilder().addComponents(select);
         await interaction.reply({ content: 'Select your Tracking Toolkit Tier', components: [row], ephemeral: true });
@@ -480,7 +479,7 @@ export async function execute(interaction, client) {
         const selected = interaction.values && interaction.values[0];
         const data = pendingCommunityData.get(interaction.user.id);
         if (!data) return interaction.reply({ content: 'No pending application found. Please re-open the application.', ephemeral: true });
-        const tier = Number(selected);
+        const tier = selected; // values: '3-6', '7', '8'
         const cfg = DB.getGuildConfig(interaction.guild.id) || {};
         if (!cfg.community_category || !cfg.community_review_role) return interaction.reply({ embeds: [new EmbedBuilder().setTitle('Error').setDescription('Community category or review role not configured. Run /setup').setColor(0xff0000)], ephemeral: true });
         const permissionOverwrites = [
